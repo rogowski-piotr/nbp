@@ -11,5 +11,4 @@ public enum CurrencyType {
     CurrencyType(String url) {
         this.url = url;
     }
-
 }

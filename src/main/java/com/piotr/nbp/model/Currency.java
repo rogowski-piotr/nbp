@@ -19,4 +19,5 @@ public class Currency {
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         return "datetime: " + format.format(this.datetime) + ", bid: " + bid + ", ask: " + ask;
     }
+
 }

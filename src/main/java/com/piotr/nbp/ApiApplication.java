@@ -44,7 +44,6 @@ public class ApiApplication {
 			System.out.println("Wrong date format " + e.getMessage());
 		}
 
-
 		if (db.contains(date, currencyType) == null) {
 			if (db.insert(entity, currencyType)) {
 				System.out.println("[database] Inserted: " + entity);
