@@ -1,6 +1,6 @@
 package com.piotr.nbp.request;
 
-import com.piotr.nbp.enums.CurrencyEnum;
+import com.piotr.nbp.enums.CurrencyType;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.xml.ws.http.HTTPException;
 
-public class HttpRequest implements NbpRequest {
+public class HttpRequest {
 
     String url;
 
@@ -19,13 +19,12 @@ public class HttpRequest implements NbpRequest {
         this.url = url;
     }
 
-    public String request(CurrencyEnum currency, Date date) throws IOException, HTTPException {
+    public String request(CurrencyType currency, Date date) throws IOException, HTTPException {
 
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String dateString = format.format(date);
 
-        // http://api.nbp.pl/api/exchangerates/rates/c/usd/2016-04-04/?format=json
-        String urlAddress = this.url + currency.url + dateString + "/?format=json";
+        String urlAddress = this.url + currency.url + "/" + dateString + "/?format=json";
 
         URL url = new URL(urlAddress);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
