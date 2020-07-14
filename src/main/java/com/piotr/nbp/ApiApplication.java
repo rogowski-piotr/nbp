@@ -1,9 +1,9 @@
 package com.piotr.nbp;
 
 import com.google.gson.Gson;
-import com.piotr.nbp.database.DbConnect;
+import com.piotr.nbp.database.DbAdapter;
+import com.piotr.nbp.entities.EurEntity;
 import com.piotr.nbp.enums.CurrencyType;
-import com.piotr.nbp.model.Currency;
 import com.piotr.nbp.request.HttpRequest;
 import com.piotr.nbp.request.JsonObject;
 
@@ -17,44 +17,33 @@ public class ApiApplication {
 
 	public static void main (String [] args) {
 
-		DbConnect db = new DbConnect();
-		CurrencyType currencyType = CurrencyType.USD;
-		HttpRequest r = new HttpRequest("http://api.nbp.pl/api/exchangerates/rates/c/");		// creating object which is a request to worldtimeapi.org
-		Currency entity = null;
-		Date date = null;
-		String dateStr = "2020-06-09";
+		String dateStr = "2020-07-08";
+		CurrencyType currency = CurrencyType.EUR;
 
+		DbAdapter dbAdapter = new DbAdapter();
+
+		HttpRequest r = new HttpRequest("http://api.nbp.pl/api/exchangerates/rates/c/");		// creating object which is a request to worldtimeapi.org
 
 		try {
-			date = new SimpleDateFormat("yyyy-MM-dd").parse(dateStr);
-			Gson gson = new Gson();
+			Date date = new SimpleDateFormat("yyyy-MM-dd").parse(dateStr);
 
-			String response = r.request(currencyType, date);
-			//System.out.println(response);
+			if (!dbAdapter.contain(date)) {
+				String response = r.request(currency, date);
+				System.out.println(response);
 
-			JsonObject jsOb = gson.fromJson(response, JsonObject.class);
+				Gson gson = new Gson();
+				JsonObject jsOb = gson.fromJson(response, JsonObject.class);
 
-			entity = new Currency(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
+				EurEntity entity = new EurEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
+				dbAdapter.insert(entity);
+			}
 
 		} catch (HTTPException ex) {				// catch any HTTP error code from server
 			System.out.println("Server connection error http code: " + ex.getStatusCode());
 		} catch (IOException exc) {					// do when an error occurred on the client's side
 			System.out.println(exc.getMessage() + " is not available (client error)");
 		} catch (ParseException e) {				// catch if wrong data format during parsing
-			System.out.println("Wrong date format " + e.getMessage());
+			System.out.println("Wrong format of date");
 		}
-
-		if (db.contains(date, currencyType) == null) {
-			if (db.insert(entity, currencyType)) {
-				System.out.println("[database] Inserted: " + entity);
-			}
-		}
-
-		if (date != null && entity != null) {
-			System.out.println(entity);
-		}
-
-
-
 	}
 }
