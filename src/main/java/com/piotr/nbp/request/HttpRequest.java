@@ -1,5 +1,7 @@
 package com.piotr.nbp.request;
 
+import com.google.gson.Gson;
+import com.piotr.nbp.entities.*;
 import com.piotr.nbp.enums.CurrencyType;
 
 import java.io.BufferedReader;
@@ -11,20 +13,17 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.xml.ws.http.HTTPException;
 
-public class HttpRequest {
 
-    String url;
+public abstract class HttpRequest {
 
-    public HttpRequest(String url) {
-        this.url = url;
-    }
+    private static final String URL = "http://api.nbp.pl/api/exchangerates/rates/c/";
 
-    public String request(CurrencyType currency, Date date) throws IOException, HTTPException {
+    public static Currency request(CurrencyType currency, Date date) throws IOException, HTTPException {
 
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String dateString = format.format(date);
 
-        String urlAddress = this.url + currency.url + "/" + dateString + "/?format=json";
+        String urlAddress = URL + currency.url + "/" + dateString + "/?format=json";
 
         URL url = new URL(urlAddress);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -33,10 +32,30 @@ public class HttpRequest {
 
         if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String r = in.readLine();
+            String response = in.readLine();
             in.close();
-            return r;
+            return convertToEntity(response, currency, date);
+
         } else throw new HTTPException(connection.getResponseCode());
+    }
+
+    private static Currency convertToEntity(String response, CurrencyType currency, Date date) {
+        Gson gson = new Gson();
+        JsonObject jsOb = gson.fromJson(response, JsonObject.class);
+
+        Currency entity = null;
+        switch (currency) {
+            case EUR:
+                entity = new EurEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
+                break;
+            case USD:
+                entity = new UsdEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
+                break;
+            case RUB:
+                entity = new RubEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
+                break;
+        }
+        return entity;
     }
 
 }

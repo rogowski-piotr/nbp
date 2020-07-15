@@ -3,6 +3,7 @@ package com.piotr.nbp.entities;
 import lombok.*;
 
 import javax.persistence.*;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @Getter
@@ -22,4 +23,10 @@ public class UsdEntity implements Currency {
 
     @Column(name = "ask")
     Double ask;
+
+    public String toString() {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        String stringDate= format.format(datetime);
+        return stringDate + "\t\task: " + ask + "\t\tbid: " + bid;
+    }
 }

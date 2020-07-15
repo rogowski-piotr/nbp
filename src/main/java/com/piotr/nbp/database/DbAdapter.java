@@ -1,14 +1,11 @@
 package com.piotr.nbp.database;
 
 import com.piotr.nbp.entities.Currency;
-import com.piotr.nbp.entities.EurEntity;
-import org.eclipse.persistence.config.HintValues;
-import org.eclipse.persistence.config.QueryHints;
-import org.eclipse.persistence.exceptions.DatabaseException;
+import com.piotr.nbp.enums.CurrencyType;
 
 import javax.persistence.*;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -38,9 +35,9 @@ public class DbAdapter {
         }
     }
 
-    public Currency getEntity(Date date) {
+    public Currency getEntity(Date date, CurrencyType currency) {
         try {
-            Query query = entityManager.createQuery("SELECT t FROM EurEntity t WHERE t.datetime = :datetim").setParameter("datetim", date);
+            Query query = entityManager.createQuery("SELECT t FROM " + currency.type.getSimpleName() + " t WHERE t.datetime = :datetim").setParameter("datetim", date);
             Object result = query.getSingleResult();
             return (result == null) ? null : (Currency) result;
         } catch (NoResultException e) {
@@ -48,15 +45,28 @@ public class DbAdapter {
         }
     }
 
-    public void getEntities(Date dateFrom, Date dateTo) {
-        Query query = entityManager.createQuery("SELECT t FROM EurEntity t WHERE t.datetime >= :dateFrom AND t.datetime <= :dateTo")
+    public List<Date> getMissingElements(Date dateFrom, Date dateTo, CurrencyType currency) {
+        Query query = entityManager.createQuery("SELECT t FROM " + currency.type.getSimpleName() + " t WHERE t.datetime >= :dateFrom AND t.datetime <= :dateTo")
                                     .setParameter("dateFrom", dateFrom)
                                     .setParameter("dateTo", dateTo);
-        List<Object> result = query.getResultList();
-        System.out.println("RESULT:");
-        for (Object i : result) {
-            System.out.println(i);
+
+        List<Object> resultFromDatabase = query.getResultList();
+        List<Date> dateList = new ArrayList<>();
+
+        while (dateFrom.before(dateTo) || dateFrom.equals(dateTo)) {
+            dateList.add(dateFrom);
+
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(dateFrom);
+            calendar.add(Calendar.DATE, 1);
+            dateFrom = calendar.getTime();
         }
+
+        for (Object el : resultFromDatabase) {
+            Date date = ((Currency)el).getDatetime();
+            dateList.remove(date);
+        }
+        return dateList;
     }
 
 }

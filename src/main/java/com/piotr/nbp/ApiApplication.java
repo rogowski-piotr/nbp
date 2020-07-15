@@ -1,70 +1,83 @@
 package com.piotr.nbp;
 
-import com.google.gson.Gson;
 import com.piotr.nbp.database.DbAdapter;
-import com.piotr.nbp.entities.Currency;
-import com.piotr.nbp.entities.EurEntity;
-import com.piotr.nbp.entities.RubEntity;
-import com.piotr.nbp.entities.UsdEntity;
+import com.piotr.nbp.entities.*;
 import com.piotr.nbp.enums.CurrencyType;
 import com.piotr.nbp.request.HttpRequest;
-import com.piotr.nbp.request.JsonObject;
-import org.eclipse.persistence.exceptions.DatabaseException;
 
-import javax.persistence.PersistenceException;
 import javax.xml.ws.http.HTTPException;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 public class ApiApplication {
 
 	public static void main (String [] args) {
 
-		String dateStr = "2020-07-06";
+		String dateFromStr = "2020-06-01";
+		String dateToStr = "2020-07-15";
 		CurrencyType currency = CurrencyType.EUR;
 
-		HttpRequest r = new HttpRequest("http://api.nbp.pl/api/exchangerates/rates/c/");		// creating object which is a request to worldtimeapi.org
 		DbAdapter dbAdapter = new DbAdapter();
 
 
 		try {
-			Date date = new SimpleDateFormat("yyyy-MM-dd").parse(dateStr);
+			Date dateFrom = new SimpleDateFormat("yyyy-MM-dd").parse(dateFromStr);
+			Date dateTo = new SimpleDateFormat("yyyy-MM-dd").parse(dateToStr);
 
-			Currency e = dbAdapter.getEntity(date);
-			if (e != null) {
-				System.out.println(e);
-				System.exit(0);
+			List<Date> missingDateElements = dbAdapter.getMissingElements(dateFrom, dateTo, currency);
+
+			for (Date date : missingDateElements) {
+				try {
+					Currency entity = HttpRequest.request(currency, date);
+					dbAdapter.insert(entity);
+				} catch (HTTPException e) {
+						if (!(e.getStatusCode() == 404))
+							throw new HTTPException(e.getStatusCode());
+				}
 			}
 
-			String response = r.request(currency, date);
-			System.out.println(response);
+			Currency bestAsk = null;
+			Currency bestBid = null;
 
-			Gson gson = new Gson();
-			JsonObject jsOb = gson.fromJson(response, JsonObject.class);
+			Date date = dateFrom;
+			while (date.before(dateTo) || date.equals(dateTo)) {
+				Currency entity = dbAdapter.getEntity(date, currency);
+				if (entity != null) {
+					System.out.println(entity);
+					if (bestAsk == null) {
+						bestAsk = entity;
+						bestBid = entity;
+					}
+					if (entity.getAsk() < bestAsk.getAsk()) {
+						bestAsk = entity;
+					}
+					if (entity.getBid() > bestBid.getBid()) {
+						bestBid = entity;
+					}
+				}
 
-			Currency entity = null;
-			switch (currency) {
-				case EUR:
-					entity = new EurEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
-					break;
-				case USD:
-					entity = new UsdEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
-					break;
-				case RUB:
-					entity = new RubEntity(date, jsOb.rates.get(0).bid, jsOb.rates.get(0).ask);
-					break;
+				Calendar calendar = Calendar.getInstance();
+				calendar.setTime(date);
+				calendar.add(Calendar.DATE, 1);
+				date = calendar.getTime();
 			}
 
-			dbAdapter.insert(entity);
+			System.out.println("\nBEST BID:");
+			System.out.println(bestBid);
+			System.out.println("BEST ASK");
+			System.out.println(bestAsk);
+
 
 		} catch (HTTPException e1) {				// catch any HTTP error code from server
 			System.out.println("Server connection error http code: " + e1.getStatusCode());
 		} catch (IOException e2) {					// do when an error occurred on the client's side
 			System.out.println(e2.getMessage() + " is not available (client error)");
 		} catch (ParseException e3) {				// catch if wrong data format during parsing
-			System.out.println("Wrong format of date: " + e3.getMessage());
+			System.out.println("Wrong date format: " + e3.getMessage());
 		}
 	}
 }
