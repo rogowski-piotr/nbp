@@ -12,7 +12,7 @@ import java.util.Date;
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
 @Entity
 @Table(name = "eur")
-public class EurEntity {
+public class EurEntity implements Currency {
 
     @Id
     @Column(name = "datetime")

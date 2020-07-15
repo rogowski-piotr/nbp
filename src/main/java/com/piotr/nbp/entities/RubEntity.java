@@ -11,7 +11,7 @@ import java.util.Date;
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
 @Entity
 @Table(name = "rub")
-public class RubEntity {
+public class RubEntity implements Currency {
 
     @Id
     @Column(name = "datetime")
